@@ -30,30 +30,86 @@ This dataset was compiled by Dennis Wagner on 05 September 2020. It includes 173
 
 ## Variable Definition
 
-| Variable (Data Type) | Definition |
-|:-------------------|:---------------------------------------------------|
-| family (multinomial) | String of the name of the family of mushroom species |
-| name (multinomial) | String of the of the mushroom species |
-| class (binary) | poisonous=p, edibile=e |
-| cap-diameter (metrical) | float number(s) in cm, two values=min max, one value=mean |
-| cap-shape (nominal | bell=b, conical=c, convex=x, flat=f, sunken=s, spherical=p, others=o |
-| cap-surface (nominal) | fibrous=i, grooves=g, scaly=y, smooth=s,shiny=h, leathery=l, silky=k, sticky=t, wrinkled=w, fleshy=e |
-| cap-color (nominal) | brown=n, buff=b, gray=g, green=r, pink=p, purple=u, red=e, white=w, yellow=y, blue=l, orange=o, black=k |
-| does-bruise-bleed (nominal) | bruises-or-bleeding=t,no=f |
-| gill-attachment (nominal) | adnate=a, adnexed=x, decurrent=d, free=e, sinuate=s, pores=p, none=f, unknown=? |
-| gill-spacing (nominal) | close=c, distant=d, none=f |
-| gill-color (nominal) | see cap-color + none=f |
-| stem-height (metrical) | float number(s) in cm, two values=min max, one value=mean |
-| stem-width (metrical) | =bulbous=b, swollen=s, club=c, cup=u, equal=e, rhizomorphs=z, rooted=r |
-| stem-surface (nominal) | see cap-surface + none=f |
-| stem-color (nominal) | see cap-color + none=f |
-| veil-type (nominal) | partial=p, universal=u |
-| veil-color (nominal) | see cap-color + none=f |
-| has-ring (nominal) | ring=t, none=f |
-| ring-type (nominal) | cobwebby=c, evanescent=e, flaring=r, grooved=g, large=l, pendant=p, sheathing=s, zone=z, scaly=y, movable=m, none=f, unknown=? |
-| spore-print-color (nominal) | see cap color |
-| habitat (nominal) | grasses=g, leaves=l, meadows=m, paths=p, heaths=h, urban=u, waste=w, woods=d |
-| season (nominal) | spring=s, summer=u, autumn=a, winter=w |
+| Variable  | Data Type | Definition |
+|:------------------- |:----------|:------------------------------------------------|
+| family  | Character | String of the name of the family of mushroom species |
+| name   | Character |  String of the of the mushroom species |
+| class  | Binary | poisonous=p, edibile=e |
+| cap-diameter | Numeraical |  float number(s) in cm, two values=min max, one value=mean |
+| cap-shape   | Categorical |  bell=b, conical=c, convex=x, flat=f, sunken=s, spherical=p, others=o |
+| cap-surface  | Categorical |  fibrous=i, grooves=g, scaly=y, smooth=s,shiny=h, leathery=l, silky=k, sticky=t, wrinkled=w, fleshy=e |
+| cap-color  | Categorical |  brown=n, buff=b, gray=g, green=r, pink=p, purple=u, red=e, white=w, yellow=y, blue=l, orange=o, black=k |
+| does-bruise-bleed   | Categorical |  bruises-or-bleeding=t,no=f |
+| gill-attachment   | Categorical | adnate=a, adnexed=x, decurrent=d, free=e, sinuate=s, pores=p, none=f, unknown=? |
+| gill-spacing   | Categorical |  close=c, distant=d, none=f |
+| gill-color  | Categorical |  see cap-color + none=f |
+| stem-height   | Numerical |  float number(s) in cm, two values=min max, one value=mean |
+| stem-width   | Numerical |  =bulbous=b, swollen=s, club=c, cup=u, equal=e, rhizomorphs=z, rooted=r |
+| stem-surface   | Categorical |  see cap-surface + none=f |
+| stem-color   | Categorical |  see cap-color + none=f |
+| veil-type   | Categorical | partial=p, universal=u |
+| veil-color   | Categorical |  see cap-color + none=f |
+| has-ring  | Categorical |  ring=t, none=f |
+| ring-type   | Categorical | cobwebby=c, evanescent=e, flaring=r, grooved=g, large=l, pendant=p, sheathing=s, zone=z, scaly=y, movable=m, none=f, unknown=? |
+| spore-print-color   | Categorical |  see cap color |
+| habitat   | Categorical | grasses=g, leaves=l, meadows=m, paths=p, heaths=h, urban=u, waste=w, woods=d |
+| season   | Categorical |  spring=s, summer=u, autumn=a, winter=w |
+
+## Data Preprocessing
+
+```{python}
+import pandas as pd
+import numpy as np
+
+mushroom = pd.read_csv("primary_data.csv", sep=';')
+df = pd.DataFrame(mushroom)
+
+# 定義數值變數和類別變數
+numeric_columns = ['cap-diameter', 'stem-height', 'stem-width']
+categorical_columns = ['cap-shape', 'Cap-surface', 'cap-color', 'gill-color', 'stem-color', 'veil-color', 'habitat', 'season']
+
+# 1. 處理數值變數：拆分成最小值、最大值、平均值
+for col in numeric_columns:
+
+    df[col] = df[col].fillna('[]')
+    df[col] = df[col].str.replace(r'[\[\]\s]', '', regex=True).str.split(',')
+    df[col] = df[col].apply(lambda x: [item for item in x if item] if isinstance(x, list) else [])
+    
+    df[f'{col}_min'] = np.nan
+    df[f'{col}_max'] = np.nan
+    df[f'{col}_mean'] = np.nan
+    
+    for idx, values in df[col].items():
+        if len(values) == 1:  # 單一數字視為平均值
+            df.at[idx, f'{col}_mean'] = float(values[0])
+        elif len(values) == 2:  # 兩個數字視為最小值和最大值，並利用(最大值+最小值)/2=平均值
+            df.at[idx, f'{col}_min'] = float(values[0])
+            df.at[idx, f'{col}_max'] = float(values[1])
+            #df.at[idx, f'{col}_mean'] = (float(values[0]) + float(values[1])) / 2 
+    # 移除原始欄位
+    df = df.drop(columns=[col])
+
+# 2. 處理類別變數：進行 one-hot encoding
+for col in categorical_columns:
+
+    df[col] = df[col].fillna('[]')
+    df[col] = df[col].str.replace(r'[\[\]\s]', '', regex=True).str.split(',')
+    df[col] = df[col].apply(lambda x: [item for item in x if item] if isinstance(x, list) else [])
+
+    all_categories = set()
+    for categories in df[col]:
+        for category in categories:
+            all_categories.add(category)
+    all_categories = sorted(list(all_categories)) 
+
+    for category in all_categories:
+        df[f'{col}_{category}'] = df[col].apply(lambda x: str(1) if category in x else str(0))
+    # 移除原始欄位
+    df = df.drop(columns=[col])
+
+# 顯示結果
+print(df)
+```
 
 ## Data Description
 
@@ -62,13 +118,15 @@ This dataset was compiled by Dennis Wagner on 05 September 2020. It includes 173
 # R Interface to Python
 library(reticulate)
 library(Hmisc)
-mushroom <- read.csv("primary_data.csv", sep=';')
-latex(describe(mushroom), file="")
+mushroom_r <- py_to_r(py$df)
+names(mushroom_r) <- gsub("-", "_", names(mushroom_r))
+latex(describe(mushroom_r), file = "")
 ```
 
 ## Table One
 
 ```{r}
 library(table1)
-table1(~ class, data = mushroom)
+table1(~ does_bruise_or_bleed+gill_attachment+gill_spacing+stem_root+stem_surface+veil_type+has_ring+ring_type+Spore_print_color+cap_diameter_min+cap_diameter_max+cap_diameter_mean+stem_height_min+stem_height_max+stem_height_mean+stem_width_min+stem_width_max+stem_width_mean+cap_shape_b+cap_shape_c+cap_shape_f+cap_shape_o+cap_shape_p+cap_shape_s+cap_shape_x+Cap_surface_d+Cap_surface_e+Cap_surface_g+Cap_surface_h+Cap_surface_i+Cap_surface_k+Cap_surface_l+Cap_surface_s+Cap_surface_t+Cap_surface_w+Cap_surface_y+cap_color_b+cap_color_e+cap_color_g+cap_color_k+cap_color_l+cap_color_n+cap_color_o+cap_color_p+cap_color_r+cap_color_u+cap_color_w+cap_color_y+gill_color_b+gill_color_e+gill_color_f+gill_color_g+gill_color_k+gill_color_n+gill_color_o+gill_color_p+gill_color_r+gill_color_u+gill_color_w+gill_color_y+stem_color_b+stem_color_e+stem_color_f+stem_color_g+stem_color_k+stem_color_l+stem_color_n+stem_color_o+stem_color_p+stem_color_r+stem_color_u+stem_color_w+stem_color_y+veil_color_e+veil_color_k+veil_color_n+veil_color_u+veil_color_w+veil_color_y+habitat_d+habitat_g+habitat_h+habitat_l+habitat_m+habitat_p+habitat_u+habitat_w+season_a+season_s+season_u+season_w | class, 
+       data = mushroom_r)
 ```
